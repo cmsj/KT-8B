@@ -1,0 +1,13 @@
+services:
+  kt:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.json:/config/config.json:ro
+      - kt-data:/data
+
+volumes:
+  kt-data:

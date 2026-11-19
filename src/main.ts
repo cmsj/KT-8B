@@ -1,0 +1,85 @@
+import { Client, Events, GatewayIntentBits, type Message } from "discord.js";
+import { IssueLookup, extractReferences, linkReferences } from "./chat/linker.ts";
+import { type Config, loadConfig } from "./config.ts";
+import { RestGateway } from "./discord/gateway.ts";
+import { Updates } from "./discord/updates.ts";
+import type { Context } from "./handlers/context.ts";
+import { consoleLogger as log } from "./log.ts";
+import { routeEvent } from "./router.ts";
+import { Store } from "./store.ts";
+import { type WebhookDelivery, createWebhookServer } from "./webhook-server.ts";
+
+const config = loadConfig(process.env.KT_CONFIG ?? "config.json");
+const store = new Store(config.databasePath);
+
+const intents = [GatewayIntentBits.Guilds];
+if (config.discord.chatChannelIds.length > 0) {
+  // Reading "#123" in chat needs the privileged Message Content intent (enable it in the Developer Portal).
+  intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+}
+const client = new Client({ intents });
+
+const ctx: Context = { config, store, updates: new Updates(config, store, new RestGateway(client), log), log };
+
+// Events are handled one at a time: they're infrequent, and it means two events
+// about the same PR can't race each other's reaction updates.
+let queue: Promise<void> = Promise.resolve();
+function enqueue({ id, event, payload }: WebhookDelivery): void {
+  queue = queue.then(async () => {
+    if (store.hasDelivery(id)) return;
+    try {
+      await routeEvent(ctx, event, payload);
+      store.recordDelivery(id);
+    } catch (error) {
+      log.error(`failed to handle ${event} delivery ${id}`, error);
+    }
+  });
+}
+
+function listenForChat(config: Config): void {
+  const lookup = new IssueLookup(config.github.repo, config.secrets.githubToken, log);
+  const channels = new Set(config.discord.chatChannelIds);
+
+  client.on(Events.MessageCreate, async (message: Message) => {
+    if (message.author.bot) return;
+    const channel = message.channel;
+    const inChatChannel = channels.has(channel.id) || (channel.isThread() && channel.parentId !== null && channels.has(channel.parentId));
+    if (!inChatChannel) return;
+
+    const numbers = extractReferences(message.content, config.linker.maxLinksPerMessage);
+    if (numbers.length === 0) return;
+
+    try {
+      const lines = await linkReferences(config.github.repo, numbers, lookup);
+      if (lines.length === 0) return;
+      await message.reply({ content: lines.join("\n"), allowedMentions: { parse: [], repliedUser: false }, flags: "SuppressEmbeds" });
+    } catch (error) {
+      log.warn("failed to reply with issue links", error);
+    }
+  });
+}
+
+if (config.discord.chatChannelIds.length > 0) listenForChat(config);
+
+client.once(Events.ClientReady, (ready) => {
+  log.info(`logged in to Discord as ${ready.user.tag}`);
+  const server = createWebhookServer({ path: config.server.path, secret: config.secrets.webhookSecret, log, onDelivery: enqueue });
+  server.listen(config.server.port, () => log.info(`listening for GitHub webhooks on :${config.server.port}${config.server.path}`));
+
+  const pruneTimer = setInterval(() => store.prune(), 24 * 60 * 60 * 1000);
+  pruneTimer.unref();
+
+  const shutdown = (signal: string) => {
+    log.info(`${signal} received, shutting down`);
+    server.close();
+    void queue.finally(async () => {
+      await client.destroy();
+      store.close();
+      process.exit(0);
+    });
+  };
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+});
+
+await client.login(config.secrets.discordToken);
