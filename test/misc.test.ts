@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseConfig } from "../src/config.ts";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { loadConfig, parseConfig } from "../src/config.ts";
 import { encodeEmoji } from "../src/discord/gateway.ts";
 import { summarize } from "../src/render.ts";
 
@@ -33,5 +36,23 @@ describe("parseConfig", () => {
   it("explains what's wrong", () => {
     assert.throws(() => parseConfig({ github: { repo: "nope" }, discord: { updatesChannelId: "x" } }, env), /owner\/name[\s\S]*snowflake/);
     assert.throws(() => parseConfig({ github: { repo: "a/b" }, discord: { updatesChannelId: "123456789012345678" } }, {}), /DISCORD_TOKEN/);
+  });
+});
+
+describe("loadConfig", () => {
+  const dir = mkdtempSync(join(tmpdir(), "kt-config-"));
+  const env = { DISCORD_TOKEN: "t", GITHUB_WEBHOOK_SECRET: "s" };
+
+  it("explains a missing file, a directory in its place, and bad JSON", () => {
+    assert.throws(() => loadConfig(join(dir, "nope.json"), env), /No config file at .*nope\.json/);
+    assert.throws(() => loadConfig(dir, env), /is a directory, not a config file/);
+    writeFileSync(join(dir, "bad.json"), "{ nope");
+    assert.throws(() => loadConfig(join(dir, "bad.json"), env), /bad\.json is not valid JSON/);
+  });
+
+  it("loads a valid file", () => {
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ github: { repo: "a/b" }, discord: { updatesChannelId: "123456789012345678" } }));
+    assert.equal(loadConfig(path, env).github.repo, "a/b");
   });
 });

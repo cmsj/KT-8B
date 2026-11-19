@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 
 const snowflake = z.string().regex(/^\d{15,22}$/, "must be a Discord ID (snowflake)");
@@ -121,5 +121,24 @@ export function parseConfig(raw: unknown, env: NodeJS.ProcessEnv): Config {
 }
 
 export function loadConfig(path: string, env: NodeJS.ProcessEnv = process.env): Config {
-  return parseConfig(JSON.parse(readFileSync(path, "utf8")), env);
+  let stats;
+  try {
+    stats = statSync(path);
+  } catch {
+    throw new Error(`No config file at ${path}. Copy config.example.json there, or point KT_CONFIG at your config file.`);
+  }
+  if (stats.isDirectory()) {
+    throw new Error(
+      `${path} is a directory, not a config file. Docker creates an empty directory when a bind-mounted file ` +
+        `doesn't exist on the host. Remove that directory on the host, create the config file there, and restart.`,
+    );
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new Error(`${path} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return parseConfig(raw, env);
 }
