@@ -67,6 +67,8 @@ Secrets come from the environment:
 docker compose up -d --build
 ```
 
+Each published GitHub release also builds a multi-arch image at `ghcr.io/<owner>/<repo>`. A release tagged `v1.2.3` is published as `1.2.3`, `1.2`, `1` and `latest`. A pre-release gets only its exact version tag. Release tags must be semver (`v1.2.3`). To use the published image, replace `build: .` in `compose.yaml` with `image: ghcr.io/<owner>/<repo>:1`.
+
 Or without Docker (Node 24 or newer runs the TypeScript directly, so there is no build step):
 
 ```sh
