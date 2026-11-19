@@ -1,0 +1,41 @@
+{
+  "github": {
+    "repo": "owner/name"
+  },
+  "server": {
+    "port": 8080,
+    "path": "/webhook"
+  },
+  "databasePath": "/data/kt.db",
+  "discord": {
+    "updatesChannelId": "000000000000000000",
+    "chatChannelIds": ["000000000000000000"]
+  },
+  "issues": {
+    "pingLabels": ["crash"],
+    "pingRoleId": "000000000000000000",
+    "ignoreAuthors": []
+  },
+  "pullRequests": {
+    "ignoreAuthors": ["dependabot[bot]"]
+  },
+  "releases": {
+    "pingRoleId": "000000000000000000",
+    "pingOnPrerelease": false
+  },
+  "security": {
+    "minimumSeverity": "low",
+    "dependabotAlerts": true,
+    "repositoryAdvisories": true,
+    "codeScanningAlerts": true,
+    "secretScanningAlerts": true
+  },
+  "ci": {
+    "ignoreWorkflows": [],
+    "reportDefaultBranchFailures": true
+  },
+  "threads": {
+    "enabled": true,
+    "autoArchiveMinutes": 1440
+  }
+}
