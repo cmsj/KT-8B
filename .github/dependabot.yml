@@ -1,0 +1,43 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Give a new release a few days to be found out (or yanked) before adopting it.
+    cooldown:
+      default-days: 3
+    groups:
+      # One PR for everything routine; major versions still get a PR each.
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # @types/node should match the Node major in the Dockerfile and test workflow,
+      # so it moves when we change Node versions, not on its own.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    # The Dockerfile pins node:26-slim by digest, so this proposes a new digest whenever
+    # the image is rebuilt upstream (e.g. for OS security fixes).
+    ignore:
+      # Moving to a new Node major is a deliberate choice (it should be an LTS line, and
+      # the test workflow and @types/node move with it), so only take updates within 26.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      github-actions:
+        patterns: ["*"]

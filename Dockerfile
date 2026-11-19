@@ -1,4 +1,5 @@
-FROM node:26-slim
+# Pinned by digest so builds are reproducible; Dependabot bumps it when a new 26-slim image is published.
+FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc
 
 WORKDIR /app
 ENV NODE_ENV=production
