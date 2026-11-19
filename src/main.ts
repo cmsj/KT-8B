@@ -9,7 +9,14 @@ import { routeEvent } from "./router.ts";
 import { Store } from "./store.ts";
 import { type WebhookDelivery, createWebhookServer } from "./webhook-server.ts";
 
-const config = loadConfig(process.env.KT_CONFIG ?? "config.json");
+let config: Config;
+try {
+  config = loadConfig(process.env.KT_CONFIG ?? "config.json");
+} catch (error) {
+  // Configuration mistakes are the user's to fix, so explain them without a stack trace.
+  log.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 const store = new Store(config.databasePath);
 
 const intents = [GatewayIntentBits.Guilds];

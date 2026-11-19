@@ -6,7 +6,13 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./config.json:/config/config.json:ro
+      - type: bind
+        source: ./config.json
+        target: /config/config.json
+        read_only: true
+        bind:
+          # Fail if config.json is missing, rather than Docker creating an empty directory in its place.
+          create_host_path: false
       - kt-data:/data
 
 volumes:
