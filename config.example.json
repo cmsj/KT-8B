@@ -20,6 +20,7 @@
     "ignoreAuthors": ["dependabot[bot]"]
   },
   "releases": {
+    "channelId": "000000000000000000",
     "pingRoleId": "000000000000000000",
     "pingOnPrerelease": false
   },

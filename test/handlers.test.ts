@@ -232,6 +232,22 @@ describe("releases", () => {
     assert.equal(stable?.message.embeds?.[0]?.title, "Release v1.0.0");
     assert.deepEqual(beta?.message.pingRoleIds, []);
   });
+
+  it("posts in releases.channelId when set, and pings pre-releases when pingOnPrerelease is set", async () => {
+    const channelId = "300000000000000003";
+    const ctx = makeContext(makeConfig({ releases: { channelId, pingRoleId: RELEASE_ROLE, pingOnPrerelease: true } }));
+    await routeEvent(ctx, "release", {
+      action: "published",
+      repository,
+      release: { tag_name: "v2.0.0-beta.1", name: null, body: "Notes", html_url: "https://github.com/r/v2", prerelease: true, author: null },
+    });
+
+    assert.equal(ctx.discord.posts().length, 0);
+    const [sent] = ctx.discord.sent;
+    assert.equal(sent?.channelId, channelId);
+    assert.deepEqual(sent?.message.pingRoleIds, [RELEASE_ROLE]);
+    assert.equal(ctx.store.getPost("release", "v2.0.0-beta.1")?.channelId, channelId);
+  });
 });
 
 describe("security", () => {
