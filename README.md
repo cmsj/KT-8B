@@ -58,6 +58,7 @@ Secrets come from the environment:
 | `GITHUB_WEBHOOK_SECRET` | The secret you set on the GitHub webhook. Required. |
 | `GITHUB_TOKEN` | Optional. The `#123` linker uses it to look up titles. Without it, GitHub allows 60 lookups an hour. A fine-grained token with read-only Issues and Pull requests access is enough. |
 | `KT_CONFIG` | Path to the config file. Defaults to `config.json` (`/config/config.json` in Docker). |
+| `KT_LOG_LEVEL` | Set to `debug` to log every delivery KT receives and why it did or didn't post or update anything. |
 
 `src/config.ts` documents every option and its default. You only need `github.repo` and `discord.updatesChannelId`.
 
@@ -86,7 +87,7 @@ In the repository, go to *Settings → Webhooks → Add webhook*:
 - **Secret**: the same value as `GITHUB_WEBHOOK_SECRET`
 - **Events**: *Let me select individual events* → Issues, Pull requests, Pull request reviews, Releases, Workflow runs, Dependabot alerts, Repository advisories, Code scanning alerts, Secret scanning alerts.
 
-KT ignores events for any repository other than `github.repo`. Redeliveries of an event it has already handled are also ignored. If handling failed, you can redeliver the event from GitHub's webhook page and KT will try again.
+KT ignores events for any repository other than `github.repo`, and logs a warning naming both repositories. If the repository is renamed or transferred, GitHub keeps sending to the same webhook, but under the new name, so update `github.repo` to match. Redeliveries of an event KT has already handled are also ignored. If handling failed, or the event was ignored because it was for a different repository, you can redeliver the event from GitHub's webhook page and KT will try again.
 
 > **Note:** Dependabot, code scanning and secret scanning alerts are normally visible only to people with access to the repository's security tab. Posting them makes their titles visible to everyone in the updates channel. Turn off any you don't want under `security`. KT only posts repository advisories once they're **published**, never when they're privately reported. KT never includes the contents of a secret scanning alert.
 

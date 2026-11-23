@@ -28,21 +28,63 @@ const HANDLERS: Record<string, Handler> = {
 
 export const SUBSCRIBED_EVENTS = Object.keys(HANDLERS);
 
-export async function routeEvent(ctx: Context, name: string, payload: unknown): Promise<void> {
-  const repo = (payload as { repository?: P.Repository }).repository?.full_name;
+interface AnyPayload {
+  action?: string;
+  repository?: P.Repository;
+  issue?: { number: number };
+  pull_request?: { number: number };
+  release?: { tag_name: string };
+  workflow_run?: { id: number; name?: string | null };
+  alert?: { number?: number };
+}
+
+/** A short description for logs, e.g. "pull_request.closed #12" or "workflow_run.completed Build (run 123)". */
+export function describeEvent(name: string, payload: unknown): string {
+  const p = payload as AnyPayload;
+  const subject = p.pull_request
+    ? `#${p.pull_request.number}`
+    : p.issue
+      ? `#${p.issue.number}`
+      : p.release
+        ? p.release.tag_name
+        : p.workflow_run
+          ? `${p.workflow_run.name ?? "workflow"} (run ${p.workflow_run.id})`
+          : p.alert?.number !== undefined
+            ? `alert ${p.alert.number}`
+            : undefined;
+  return `${name}${p.action ? `.${p.action}` : ""}${subject ? ` ${subject}` : ""}`;
+}
+
+/**
+ * Hands the event to its handler. Returns false if it was ignored without being
+ * looked at (not an event KT handles, or for another repository), so the caller
+ * doesn't record it as handled and a redelivery can be tried after fixing the config.
+ */
+export async function routeEvent(ctx: Context, name: string, payload: unknown): Promise<boolean> {
+  const repo = (payload as AnyPayload).repository?.full_name;
+  const description = describeEvent(name, payload);
 
   if (name === "ping") {
     ctx.log.info(`webhook ping received${repo ? ` for ${repo}` : ""}`);
-    return;
+    return false;
   }
 
   const handler = HANDLERS[name];
-  if (!handler) return;
-
-  if (repo?.toLowerCase() !== ctx.config.github.repo.toLowerCase()) {
-    ctx.log.info(`ignoring ${name} event for ${repo ?? "unknown repository"}`);
-    return;
+  if (!handler) {
+    ctx.log.debug(`ignoring ${description}: KT doesn't handle ${name} events`);
+    return false;
   }
 
+  const expected = ctx.config.github.repo;
+  if (repo?.toLowerCase() !== expected.toLowerCase()) {
+    ctx.log.warn(
+      `ignoring ${description} for ${repo ?? "an unknown repository"}: KT is configured for ${expected} (github.repo). ` +
+        `If the repository was renamed or transferred, update github.repo.`,
+    );
+    return false;
+  }
+
+  ctx.log.debug(`handling ${description}`);
   await handler(ctx, payload as never);
+  return true;
 }

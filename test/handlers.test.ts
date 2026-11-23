@@ -61,6 +61,18 @@ describe("issues", () => {
     assert.equal(ctx.discord.sent.length, 0);
   });
 
+  it("says which repository it expected, and doesn't count the event as handled", async () => {
+    const warnings: string[] = [];
+    const ctx = makeContext();
+    ctx.log = { ...ctx.log, warn: (message) => warnings.push(message) };
+    const handled = await routeEvent(ctx, "pull_request", { ...prEvent("closed", 3), repository: { ...repository, full_name: "Neworg/widgets" } });
+    assert.equal(handled, false);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0]!, /pull_request\.closed #3 for Neworg\/widgets: KT is configured for octo\/widgets/);
+    assert.equal(await routeEvent(ctx, "issues", issueEvent("opened", 4)), true);
+    assert.equal(await routeEvent(ctx, "star", { action: "created", repository }), false);
+  });
+
   it("skips thread notes when threads are disabled", async () => {
     const ctx = makeContext(makeConfig({ threads: { enabled: false } }));
     await routeEvent(ctx, "issues", issueEvent("opened", 7));

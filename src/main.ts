@@ -33,10 +33,12 @@ const ctx: Context = { config, store, updates: new Updates(config, store, new Re
 let queue: Promise<void> = Promise.resolve();
 function enqueue({ id, event, payload }: WebhookDelivery): void {
   queue = queue.then(async () => {
-    if (store.hasDelivery(id)) return;
+    if (store.hasDelivery(id)) {
+      log.debug(`skipping delivery ${id} (${event}): already handled`);
+      return;
+    }
     try {
-      await routeEvent(ctx, event, payload);
-      store.recordDelivery(id);
+      if (await routeEvent(ctx, event, payload)) store.recordDelivery(id);
     } catch (error) {
       log.error(`failed to handle ${event} delivery ${id}`, error);
     }
@@ -70,6 +72,8 @@ if (config.discord.chatChannelIds.length > 0) listenForChat(config);
 
 client.once(Events.ClientReady, (ready) => {
   log.info(`logged in to Discord as ${ready.user.tag}`);
+  log.info(`reporting on ${config.github.repo} in channel ${config.discord.updatesChannelId}`);
+  log.debug("debug logging is on");
   const server = createWebhookServer({ path: config.server.path, secret: config.secrets.webhookSecret, log, onDelivery: enqueue });
   server.listen(config.server.port, () => log.info(`listening for GitHub webhooks on :${config.server.port}${config.server.path}`));
 
