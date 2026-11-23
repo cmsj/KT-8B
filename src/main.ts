@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits, type Message } from "discord.js";
+import { Client, Events, GatewayIntentBits, type Message, MessageType } from "discord.js";
 import { IssueLookup, extractReferences, linkReferences } from "./chat/linker.ts";
 import { type Config, loadConfig } from "./config.ts";
 import { RestGateway } from "./discord/gateway.ts";
@@ -19,12 +19,16 @@ try {
 }
 const store = new Store(config.databasePath);
 
-const intents = [GatewayIntentBits.Guilds];
+const intents = new Set([GatewayIntentBits.Guilds]);
+if (config.threads.enabled) {
+  // Seeing the "KT started a thread" messages, so they can be deleted. Not privileged.
+  intents.add(GatewayIntentBits.GuildMessages);
+}
 if (config.discord.chatChannelIds.length > 0) {
   // Reading "#123" in chat needs the privileged Message Content intent (enable it in the Developer Portal).
-  intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+  intents.add(GatewayIntentBits.GuildMessages).add(GatewayIntentBits.MessageContent);
 }
-const client = new Client({ intents });
+const client = new Client({ intents: [...intents] });
 
 const ctx: Context = { config, store, updates: new Updates(config, store, new RestGateway(client), log), log };
 
@@ -68,7 +72,25 @@ function listenForChat(config: Config): void {
   });
 }
 
+/**
+ * Discord announces every thread KT starts with a "KT-8B started a thread" message in the
+ * channel, which is exactly the clutter the follow-up threads exist to avoid. KT is the
+ * author of those messages, so it can delete them without the Manage Messages permission.
+ */
+function deleteThreadAnnouncements(): void {
+  client.on(Events.MessageCreate, async (message: Message) => {
+    if (message.type !== MessageType.ThreadCreated || message.author.id !== client.user?.id) return;
+    try {
+      await message.delete();
+      log.debug(`deleted the announcement of thread ${message.reference?.channelId} in channel ${message.channelId}`);
+    } catch (error) {
+      log.warn("could not delete a thread announcement", error);
+    }
+  });
+}
+
 if (config.discord.chatChannelIds.length > 0) listenForChat(config);
+if (config.threads.enabled) deleteThreadAnnouncements();
 
 client.once(Events.ClientReady, (ready) => {
   log.info(`logged in to Discord as ${ready.user.tag}`);

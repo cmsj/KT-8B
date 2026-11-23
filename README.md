@@ -21,7 +21,7 @@ Each post has three independent reaction **slots** (CI, review, lifecycle). Each
 
 ### Follow-up threads
 
-When something happens to a post (closed, merged, reopened, a review, CI starting to fail, a default-branch failure being fixed), KT also adds one line about it to a thread on that post. The thread is created the first time it's needed. This keeps a history without adding messages to the channel. Turn it off with `threads.enabled: false`.
+When something happens to a post (closed, merged, reopened, a review, CI starting to fail, a default-branch failure being fixed), KT also adds one line about it to a thread on that post. The thread is created the first time it's needed. This keeps a history without adding messages to the channel. Discord announces each new thread with a "KT-8B started a thread" message in the channel, and KT deletes those as they appear. Turn threads off with `threads.enabled: false`.
 
 ### How CI is worked out
 
