@@ -8,9 +8,16 @@ export async function handleIssues(ctx: Context, event: IssuesEvent): Promise<vo
   const post = ctx.store.getPost("issue", issue.number);
   const by = event.sender ? ` by ${event.sender.login}` : "";
 
+  if (!post && event.action !== "opened") {
+    ctx.log.debug(`no post for issue #${issue.number} (not opened while KT was listening), so nothing to update`);
+  }
+
   switch (event.action) {
     case "opened": {
-      if (post || ctx.config.issues.ignoreAuthors.includes(issue.user?.login ?? "")) return;
+      if (post) return ctx.log.debug(`issue #${issue.number} is already posted`);
+      if (ctx.config.issues.ignoreAuthors.includes(issue.user?.login ?? "")) {
+        return ctx.log.debug(`not posting issue #${issue.number}: ${issue.user?.login} is in issues.ignoreAuthors`);
+      }
 
       const labels = (issue.labels ?? []).flatMap((label) => (label ? [label.name] : []));
       const pingLabels = labels.filter((label) => ctx.config.issues.pingLabels.includes(label));

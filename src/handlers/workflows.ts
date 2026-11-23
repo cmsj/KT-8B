@@ -56,7 +56,7 @@ export async function handleWorkflowRun(ctx: Context, event: WorkflowRunEvent): 
     onRepoBranch: !wr.event.startsWith("pull_request") && wr.head_repository?.full_name === repo?.full_name,
   };
 
-  if (!ctx.store.upsertRun(run)) return; // stale, out-of-order delivery
+  if (!ctx.store.upsertRun(run)) return ctx.log.debug(`ignoring stale update for run ${run.id}`); // out-of-order delivery
 
   // Fork PRs arrive with an empty pull_requests list, so match PRs on their head commit instead.
   for (const post of ctx.store.postsForHeadSha(run.headSha)) {

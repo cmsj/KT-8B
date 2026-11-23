@@ -21,10 +21,12 @@ interface Alert {
 }
 
 async function postAlert(ctx: Context, alert: Alert): Promise<void> {
-  if (ctx.store.getPost(alert.kind, alert.key)) return;
+  if (ctx.store.getPost(alert.kind, alert.key)) return ctx.log.debug(`${alert.kind} ${alert.key} is already posted`);
 
   const minimum = SEVERITY_RANK[ctx.config.security.minimumSeverity] ?? 0;
-  if (alert.severity && (SEVERITY_RANK[alert.severity.toLowerCase()] ?? 0) < minimum) return;
+  if (alert.severity && (SEVERITY_RANK[alert.severity.toLowerCase()] ?? 0) < minimum) {
+    return ctx.log.debug(`not posting ${alert.kind} ${alert.key}: ${alert.severity} is below security.minimumSeverity`);
+  }
 
   const roleId = ctx.config.security.pingRoleId;
   await ctx.updates.post({
@@ -57,7 +59,7 @@ async function updateAlert(
   sender: string | undefined,
 ): Promise<void> {
   const post = ctx.store.getPost(kind, key);
-  if (!post) return;
+  if (!post) return ctx.log.debug(`no post for ${kind} ${key}, so nothing to update`);
   const { emoji } = ctx.config;
   const by = sender ? ` by ${sender}` : "";
   const reaction = outcome === "resolved" ? emoji.alertResolved : outcome === "dismissed" ? emoji.alertDismissed : null;

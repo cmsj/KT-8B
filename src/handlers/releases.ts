@@ -6,7 +6,7 @@ export async function handleRelease(ctx: Context, event: ReleaseEvent): Promise<
   // "published" covers both releases and pre-releases; drafts don't fire it until they're published.
   if (event.action !== "published") return;
   const { release } = event;
-  if (ctx.store.getPost("release", release.tag_name)) return;
+  if (ctx.store.getPost("release", release.tag_name)) return ctx.log.debug(`release ${release.tag_name} is already posted`);
 
   const { pingRoleId, pingOnPrerelease } = ctx.config.releases;
   const ping = pingRoleId !== undefined && (!release.prerelease || pingOnPrerelease);

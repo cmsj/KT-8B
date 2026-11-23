@@ -10,9 +10,16 @@ export async function handlePullRequest(ctx: Context, event: PullRequestEvent): 
   const post = ctx.store.getPost("pr", pr.number);
   const by = event.sender ? ` by ${event.sender.login}` : "";
 
+  if (!post && event.action !== "opened") {
+    ctx.log.debug(`no post for PR #${pr.number} (not opened while KT was listening, or by an ignored author), so nothing to update`);
+  }
+
   switch (event.action) {
     case "opened": {
-      if (post || ctx.config.pullRequests.ignoreAuthors.includes(pr.user?.login ?? "")) return;
+      if (post) return ctx.log.debug(`PR #${pr.number} is already posted`);
+      if (ctx.config.pullRequests.ignoreAuthors.includes(pr.user?.login ?? "")) {
+        return ctx.log.debug(`not posting PR #${pr.number}: ${pr.user?.login} is in pullRequests.ignoreAuthors`);
+      }
 
       const stats =
         pr.changed_files !== undefined
