@@ -50,6 +50,8 @@ const fileSchema = z.object({
     .prefault({}),
   releases: z
     .object({
+      /** Where releases are posted. Defaults to `discord.updatesChannelId`. */
+      channelId: snowflake.optional(),
       pingRoleId: snowflake.optional(),
       pingOnPrerelease: z.boolean().default(false),
     })

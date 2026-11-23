@@ -13,7 +13,7 @@ KT does not try to be an audit log. A new issue is news. The 27th comment on it,
 | --- | --- | --- |
 | Issue opened | Embed with title, author, a short summary and labels. Pings `issues.pingRoleId` if the issue has a label in `issues.pingLabels`. | Closed → ✅ (completed) or 🚫 (not planned or duplicate). Reopened → the reaction is removed. If a ping label is added later, KT replies once to the post with the ping. |
 | PR opened | Embed with title, author, branch, size and a summary. | **CI**: 🟡 running, 🔴 any workflow failed, 🟢 all passed. **Review**: 👍 approved, 🛠️ changes requested. **Lifecycle**: 🔀 merged, 🗑️ closed. |
-| Release published | Embed with the release notes. Pings `releases.pingRoleId` (for pre-releases too only if `pingOnPrerelease` is set). | — |
+| Release published | Embed with the release notes. Posted in `releases.channelId` if set, otherwise the updates channel. Pings `releases.pingRoleId` (for pre-releases too only if `pingOnPrerelease` is set). | — |
 | Security alert | Dependabot alerts, published repository advisories, code scanning and secret scanning alerts. Optionally pings `security.pingRoleId`. | ✅ fixed, 🚫 dismissed, the reaction is removed if the alert is reopened. |
 | Workflow fails on the default branch | One message per workflow while it stays broken. | 🟡 while a new run is going, 🔴 still failing, 🟢 fixed. The next failure after a fix gets a new message. |
 

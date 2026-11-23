@@ -11,6 +11,8 @@ export interface NewPost {
   title: string;
   headSha?: string;
   state?: Record<string, unknown>;
+  /** Defaults to the updates channel. */
+  channelId?: string;
 }
 
 /**
@@ -32,8 +34,7 @@ export class Updates {
     this.log = log;
   }
 
-  async post({ kind, key, message, title, headSha, state }: NewPost): Promise<Post> {
-    const channelId = this.config.discord.updatesChannelId;
+  async post({ kind, key, message, title, headSha, state, channelId = this.config.discord.updatesChannelId }: NewPost): Promise<Post> {
     const messageId = await this.discord.send(channelId, message);
     const post: Post = {
       kind,
