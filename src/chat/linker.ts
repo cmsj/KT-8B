@@ -85,7 +85,9 @@ export class IssueLookup {
       // 410: the issue was deleted.
       const info = response.status === 404 || response.status === 410 ? "missing" : response.ok ? describeIssue((await response.json()) as ApiIssue) : null;
       if (info === null) {
-        this.log.warn(`GitHub API returned ${response.status} for #${number}`);
+        const rateLimited = response.headers.get("x-ratelimit-remaining") === "0";
+        const hint = rateLimited ? (this.token ? " (rate limit reached)" : " (rate limit reached; set GITHUB_TOKEN for a higher limit)") : "";
+        this.log.warn(`GitHub API returned ${response.status} for #${number}${hint}`);
         return null;
       }
       this.cache.set(number, { at: Date.now(), info });

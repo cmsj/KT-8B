@@ -65,7 +65,12 @@ function listenForChat(config: Config): void {
     try {
       const lines = await linkReferences(config.github.repo, numbers, lookup);
       if (lines.length === 0) return;
-      await message.reply({ content: lines.join("\n"), allowedMentions: { parse: [], repliedUser: false }, flags: "SuppressEmbeds" });
+      // Silent: no notification for anyone, and no link previews.
+      await message.reply({
+        content: lines.join("\n"),
+        allowedMentions: { parse: [], repliedUser: false },
+        flags: ["SuppressEmbeds", "SuppressNotifications"],
+      });
     } catch (error) {
       log.warn("failed to reply with issue links", error);
     }
